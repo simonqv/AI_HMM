@@ -14,6 +14,7 @@ for i in range(n_states):
 
 for t in range(1, len(seq)):
     for i in range(n_states):
-        a_mat[t][i] = sum([ a_mat[t-1][j]*tran[j][i] for j in range(n_states)]) * emis[i][seq[t]]
+        t_prob = sum([ a_mat[t-1][j]*tran[j][i] for j in range(n_states)])
+        a_mat[t][i] = t_prob * emis[i][seq[t]]
 
 print(sum(a_mat[-1]))
