@@ -4,16 +4,16 @@ import math
 tran = parse_matrix_from_line()
 emis = parse_matrix_from_line()
 init = parse_matrix_from_line()
-
 seq = list(map(int, input().split()[1:]))
-print(seq)
-print("-"*20)
-ans = 1
-for i, s in enumerate(seq):
-    t = emis
-    for _ in range(i+1):
-        t *= t
-    state_prob = init * t
-    print(state_prob.data[0][s])
-    ans *= state_prob.data[0][s]
-print(ans)
+
+a_mat = Matrix(len(seq), init.cols)
+n_states = init.cols
+
+for i in range(n_states):
+    a_mat[0][i] = init[0][i] * emis[i][seq[0]]
+
+for t in range(1, len(seq)):
+    for i in range(n_states):
+        a_mat[t][i] = sum([ a_mat[t-1][j]*tran[j][i] for j in range(n_states)]) * emis[i][seq[t]]
+
+print(sum(a_mat[-1]))
