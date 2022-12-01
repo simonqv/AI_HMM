@@ -21,6 +21,9 @@ class Matrix:
                     out.data[i][j] += self.data[i][k] * other.data[k][j]
         return out
 
+    def __getitem__(self, indices):
+        return self.data[indices]
+
     def __str__(self):
         out = ""
         for r in self.data:
@@ -38,6 +41,6 @@ def parse_matrix_from_line():
 def output_matrix(m):
     print(m.rows, m.cols, end=" ")
     for r in m.data:
-        print(*[round(e, 5) for e in r], end=" ")
+        print(*[round(e, 6) for e in r], end=" ")
     print()
 
