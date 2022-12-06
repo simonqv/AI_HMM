@@ -29,7 +29,7 @@ def alpha_pass():
 
     for t in range(1, len(seq)):
         for i in range(n_states):
-            t_prob = sum([ alpha_mat[t-1][j]*tran[j][i] for j in range(n_states)])
+            t_prob = sum( alpha_mat[t-1][j]*tran[j][i] for j in range(n_states) )
             alpha_mat[t][i] = t_prob * emis[i][seq[t]]
         scale[t] = 1/sum(alpha_mat[t])
         for i in range(n_states):
@@ -43,34 +43,31 @@ def beta_pass():
 
     for t in reversed(range(len(seq)-1)):
         for i in range(n_states):
-            beta_mat[t][i] = sum([beta_mat[t+1][j] * emis[j][seq[t+1]] * tran[i][j] for j in range(n_states)])
+            beta_mat[t][i] = sum( beta_mat[t+1][j] * emis[j][seq[t+1]] * tran[i][j] for j in range(n_states) )
             beta_mat[t][i] *= scale[t]
 
 
 def calc_gamma():
     sum_alpha = sum(alpha_mat[-1])  # Might be wrong
-
     for t in range(len(seq)-1):
         for i in range(n_states):
+            gamma[t][i] = 0
             for j in range(n_states):
                 alpha = alpha_mat[t][i]
                 a = tran[i][j]
                 b = emis[j][seq[t+1]]
                 beta = beta_mat[t+1][j]
                 di_gamma[t][i][j] = (alpha*a*b*beta) / sum_alpha
+                gamma[t][i] += di_gamma[t][i][j]
 
-
-            gamma[t][i] = sum(di_gamma[t][i])
-
-    # Special case?
 
 def reestimate():
     # Reestimate transmission matrix
     # 2.35 typ
     for i in range(n_states):
         for j in range(n_states):
-            sum_di_gamma = sum([di_gamma[t][i][j] for t in range(len(seq))])
-            sum_gamma = sum([gamma[t][i] for t in range(len(seq))] )
+            sum_di_gamma = sum( di_gamma[t][i][j] for t in range(len(seq)) )
+            sum_gamma = sum( gamma[t][i] for t in range(len(seq)) )
             tran[i][j] = sum_di_gamma / sum_gamma
 
     # Reestimate emission matrix
@@ -95,14 +92,8 @@ def reestimate():
         init[0][i] = gamma[0][i]
 
 
-# prev_a_mat = -math.inf
-# tran_sum = sum(map(sum, tran.data))
-# emis_sum = sum(map(sum, emis.data))
 sum_scale = math.inf
-max_iter = 200
 iter = 0
-#for _ in range(2):
-#while iter < max_iter:
 while True:
     print("\r" + str(iter) + ": " + str(sum(scale)), end="", file=sys.stderr)
     iter+=1
@@ -113,13 +104,8 @@ while True:
     reestimate()
 
     new_sum_scale = sum(map(math.log, scale))
-    # new_tran_sum = sum(map(sum, tran.data))
-    # new_emis_sum = sum(map(sum, emis.data))
-    # if abs(new_tran_sum - tran_sum) + abs(new_emis_sum - emis_sum) > 1e-8:
-    if new_sum_scale >= sum_scale:
+    if new_sum_scale+1e-3 >= sum_scale:
         break
-    # tran_sum = new_tran_sum
-    # emis_sum = new_emis_sum
     sum_scale = new_sum_scale
 
 print("", file=sys.stderr)
