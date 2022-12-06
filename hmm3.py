@@ -1,8 +1,7 @@
 from la import *
 
 
-
-
+# Init variables
 tran = parse_matrix_from_line()
 emis = parse_matrix_from_line()
 init = parse_matrix_from_line()
@@ -13,14 +12,13 @@ n_states = init.cols
 a_mat = Matrix(len(seq), n_states)
 beta_mat = Matrix(len(seq),n_states)
 
+di_gamma = [Matrix(n_states,n_states) for _ in range(len(seq))]
+gamma = Matrix(len(seq),n_states)
 
-prev_a_mat = -math.inf
-max_iter = 1000
-iter = 0
-#for _ in range(2):
-while iter < max_iter:
-    scale = [0]*len(seq)
-    iter+=1
+scale = [0]*len(seq)
+
+
+def alpha_pass():
     # Forward pass
     for i in range(n_states):
         a_mat[0][i] = init[0][i] * emis[i][seq[0]]
@@ -36,27 +34,20 @@ while iter < max_iter:
         for i in range(n_states):
             a_mat[t][i] *= scale[t]
 
-    new_a_mat = sum(a_mat[-1])
 
-    if abs(new_a_mat-prev_a_mat) < 1e-20:
-        break
-    prev_a_mat = new_a_mat
-
+def beta_pass():
     # Backwards pass
     for i in range(n_states):
-        beta_mat[-1][i] = 1 * scale[-1]
+        beta_mat[-1][i] = 1 # * scale[-1]
 
     for t in reversed(range(len(seq)-1)):
         for i in range(n_states):
             beta_mat[t][i] = sum([beta_mat[t + 1][j] * emis[j][seq[t+1]] * tran[i][j] for j in range(n_states)])
             beta_mat[t][i] *= scale[t]
 
-    di_gamma = [Matrix(n_states,n_states) for _ in range(len(seq))]
 
-    gamma = Matrix(len(seq),n_states)
-
+def calc_gamma():
     sum_alpha = sum(a_mat[-1])
-    # print(a_mat[-1])
 
     for t in range(len(seq)-1):
         for i in range(n_states):
@@ -69,16 +60,18 @@ while iter < max_iter:
 
 
             gamma[t][i] = sum(di_gamma[t][i])
-        # print(di_gamma[t])
 
-# 2.35 typ
+def reestimate():
+    # Reestimate transmission matrix
+    # 2.35 typ
     for i in range(n_states):
         sum_gamma = sum([gamma[t][i] for t in range(len(seq))] )
         for j in range(n_states):
             sum_di_gamma = sum([di_gamma[t][i][j] for t in range(len(seq))])
             tran[i][j] = sum_di_gamma / sum_gamma
 
-# b estimates. 2.36
+    # Reestimate emission matrix
+    # b estimates. 2.36
     for j in range(n_states):
         for k in seq:
             sum_gamma_denominator = 0
@@ -89,9 +82,30 @@ while iter < max_iter:
                 sum_gamma_denominator += gamma[t][j]
             emis[j][k] = sum_gamma_numerator / sum_gamma_denominator
 
-# new pi. 2.37
+    # Reestimate initial probability matrix
+    # new pi. 2.37
     for i in range(n_states):
         init[0][i] = gamma[0][i]
+
+
+prev_a_mat = -math.inf
+max_iter = 1000
+iter = 0
+#for _ in range(2):
+while iter < max_iter:
+    iter+=1
+
+    alpha_pass()
+
+    new_a_mat = sum(a_mat[-1])
+
+    if abs(new_a_mat-prev_a_mat) < 1e-20:
+        break
+    prev_a_mat = new_a_mat
+
+    beta_pass()
+    calc_gamma()
+    reestimate()
 
 
 output_matrix(tran)
